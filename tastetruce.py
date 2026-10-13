@@ -44,7 +44,7 @@ class Qloo:
     def search(self, term, kind, take=5):
         return entities(self.get("/search", {"query": term, "types": kind, "take": take}))
 
-    def insights(self, ids, kind, location=None, take=15):
+    def insights(self, ids, kind, location=None, take=30):
         params = {"filter.type": kind, "signal.interests.entities": ",".join(ids), "take": take}
         if location and kind == "urn:entity:place":
             params["filter.location.query"] = location
@@ -118,7 +118,7 @@ def plan(profiles, categories=("film", "music", "dining"), location=None, client
         per_person = []
         rankings = []
         for ids in resolved:
-            results = client.insights(ids, CATEGORIES[cat], location=location, take=15)
+            results = client.insights(ids, CATEGORIES[cat], location=location, take=30)
             valid = [x for x in results if entity_id(x) and (cat != "dining" or is_dining_place(x))]
             per_person.append({entity_id(x): x for x in valid})
             rankings.append({entity_id(x): i + 1 for i, x in enumerate(valid)})
