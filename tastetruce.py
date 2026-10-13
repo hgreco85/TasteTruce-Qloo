@@ -1,6 +1,7 @@
 """TasteTruce: deterministic cross-domain group taste agent, using Qloo (stdlib-only)."""
 from __future__ import annotations
 import json
+import math
 import os
 import urllib.error
 import urllib.parse
@@ -74,11 +75,15 @@ def is_dining_place(obj):
     return any(marker in text for marker in ("restaurant", "dining", "eatery", "cafe", "café", "bistro", "food & drink", "food and drink", "urn:tag:genre:restaurant"))
 
 def scoring(obj):
-    raw = obj.get("affinity", obj.get("score", 0))
+    """Only publish a score when Qloo supplies finite, bounded evidence."""
+    raw = obj.get("affinity", obj.get("score"))
+    if raw is None or isinstance(raw, bool):
+        return None
     try:
-        return float(raw)
+        value = float(raw)
     except (TypeError, ValueError):
-        return 0.
+        return None
+    return value if math.isfinite(value) and 0 <= value <= 1 else None
 
 def plan(profiles, categories=("film", "music", "dining"), location=None, client=None, offline=False):
     """Bounded multi-agent workflow: resolve -> discover -> rank -> justify."""
@@ -120,6 +125,8 @@ def plan(profiles, categories=("film", "music", "dining"), location=None, client
         for id_ in shared:
             objs = [group[id_] for group in per_person]
             vals = [scoring(x) for x in objs]
+            if any(value is None for value in vals):
+                continue  # Never present an invented or invalid affinity as a verified score.
             score = round(min(vals) * .7 + sum(vals) / len(vals) * .3, 4)
             scores.append((score, entity_name(objs[0]), id_, vals))
         scores.sort(key=lambda x: (-x[0], x[1], x[2]))
