@@ -25,7 +25,7 @@ Real two-person Qloo smoke test completed successfully: both artist names resolv
 A credible agent should acknowledge missing evidence and balance user utility across every group member instead of manufacturing a winning recommendation.
 
 ## What's next
-Improve entity-type detection, category-specific input and rich explanations; add bounded quota protections and stronger request-validation; verify the hosted live integration after adding the secret in Render; enhance visual design and share actual taste evidence.
+Improve entity-type detection, category-specific input and rich explanations; add bounded quota protections and stronger request-validation; continue testing the hosted live integration and improve categorical precision; enhance visual design and share actual taste evidence.
 
 ## Technology
 Qloo Taste AI API, Python, JavaScript, HTML, CSS, GitHub Actions, Render.
@@ -37,13 +37,13 @@ https://github.com/hgreco85/TasteTruce-Qloo
 https://tastetruce-qloo-demo.onrender.com
 
 ## Testing instructions
-Open the demo, enter two artist names, click Find common ground. Any mode labeled OFFLINE_FIXTURE is **not** a real Qloo result. For a live Qloo-backed demo, server must be configured with QLOO_API_KEY and started with --live. The deployed environment is initially fixture-only; do not claim hosted live API until verified.
+Open the demo, enter two artist names, click Find common ground. Any mode labeled OFFLINE_FIXTURE is **not** a real Qloo result. For a live Qloo-backed demo, server must be configured with QLOO_API_KEY and started with --live. Hosted LIVE_QLOO mode was verified via a browser screenshot on October 13, 2026, with a verified shared movie result. Later restaurant filtering was deployed; repeat manual category checks before final submission.
 
 ## Submission checklist
 - [x] Public MIT source repository
 - [x] Qloo live API tested in private CI
-- [ ] Hosted demo confirmed reachable
-- [ ] Hosted real API enabled and validated safely
+- [x] Hosted demo confirmed reachable (Render live)
+- [x] Hosted real API enabled and validated (LIVE_QLOO browser screenshot on Oct 13)
 - [ ] Final UI/functionality checked on phone and desktop
 - [ ] Devpost submission created and confirmed
 - [ ] License shows in GitHub About
