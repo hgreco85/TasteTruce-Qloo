@@ -2,6 +2,8 @@
 import argparse
 import json
 import os
+import time
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from tastetruce import plan, QlooError
 
@@ -31,6 +33,27 @@ btn.addEventListener('click',run);
 </script></body></html>'''
 
 class Handler(BaseHTTPRequestHandler):
+    rate_lock = threading.Lock()
+    requests_by_ip = {}
+    requests_total = 0
+    max_live_requests = int(os.environ.get('QLOO_MAX_LIVE_REQUESTS', '100'))
+    min_interval_seconds = 30
+
+    def allow_live_request(self):
+        if self.offline:
+            return True
+        # Trust socket address rather than user-controlled X-Forwarded-For.
+        ip = self.client_address[0]
+        now = time.monotonic()
+        with self.rate_lock:
+            if self.requests_total >= self.max_live_requests:
+                return False
+            if now - self.requests_by_ip.get(ip, -1e12) < self.min_interval_seconds:
+                return False
+            self.requests_by_ip[ip] = now
+            self.__class__.requests_total += 1
+        return True
+
     offline = True
     def do_HEAD(self):
         if self.path in ("/", "/healthz"):
@@ -56,6 +79,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/api/plan":
             return self.reply(404, {"error": "Not found"})
+        if not self.allow_live_request():
+            return self.reply(429, {"error": "Live Qloo request quota reached. Try again later."})
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if not 0 < length <= 2048:
