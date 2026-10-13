@@ -10,15 +10,17 @@ class ScoreEvidenceTests(unittest.TestCase):
                 self.assertIsNone(scoring(obj))
     def test_valid_affinity(self):
         self.assertEqual(scoring({"affinity": 0.75}), .75)
-    def test_no_unverified_match(self):
+    def test_ranked_shared_entity_without_affinity(self):
         class FakeClient:
             def search(self, term, kind, take=3):
                 return [{"id": term}]
             def insights(self, ids, kind, location=None, take=15):
                 return [{"id": "shared", "name": "Shared", "affinity": None}]
         result = plan([["A"], ["B"]], categories=("film",), client=FakeClient())
-        self.assertIsNone(result["choices"][0]["name"])
+        self.assertEqual(result["choices"][0]["name"], "Shared")
         self.assertIsNone(result["choices"][0]["score"])
+        self.assertEqual(result["choices"][0]["source"], "qloo_rank")
+        self.assertEqual(result["choices"][0]["participant_ranks"], [1, 1])
 
 if __name__ == "__main__":
     unittest.main()
