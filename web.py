@@ -32,7 +32,18 @@ btn.addEventListener('click',run);
 
 class Handler(BaseHTTPRequestHandler):
     offline = True
+    def do_HEAD(self):
+        if self.path in ("/", "/healthz"):
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def do_GET(self):
+        if self.path == "/healthz":
+            return self.reply(200, {"status": "ok", "mode": "OFFLINE_FIXTURE" if self.offline else "LIVE_QLOO"})
         if self.path != "/":
             return self.reply(404, {"error": "Not found"})
         payload = HTML.encode()
