@@ -115,29 +115,46 @@ def plan(profiles, categories=("film", "music", "dining"), location=None, client
         return {"mode": "LIVE_QLOO", "choices": [], "unresolved": unresolved, "error": "At least one participant has no resolved tastes"}
     choices = []
     for cat in categories:
-        # Per-person evidence, not pooled popularity: consensus is minimum support.
         per_person = []
+        rankings = []
         for ids in resolved:
             results = client.insights(ids, CATEGORIES[cat], location=location, take=15)
-            per_person.append({entity_id(x): x for x in results if entity_id(x) and (cat != "dining" or is_dining_place(x))})
+            valid = [x for x in results if entity_id(x) and (cat != "dining" or is_dining_place(x))]
+            per_person.append({entity_id(x): x for x in valid})
+            rankings.append({entity_id(x): i + 1 for i, x in enumerate(valid)})
         shared = set.intersection(*(set(x) for x in per_person))
-        scores = []
+        scored, ranked = [], []
         for id_ in shared:
             objs = [group[id_] for group in per_person]
             vals = [scoring(x) for x in objs]
-            if any(value is None for value in vals):
-                continue  # Never present an invented or invalid affinity as a verified score.
-            score = round(min(vals) * .7 + sum(vals) / len(vals) * .3, 4)
-            scores.append((score, entity_name(objs[0]), id_, vals))
-        scores.sort(key=lambda x: (-x[0], x[1], x[2]))
-        if scores:
-            score, name, id_, affinities = scores[0]
-            choices.append({"category": cat, "name": name or id_, "qloo_id": id_, "score": score,
-                            "participant_affinities": affinities,
-                            "why": "Shared Qloo entity: 70% weakest-member affinity + 30% mean affinity",
-                            "source": "qloo"})
+            name = entity_name(objs[0]) or id_
+            positions = [rank[id_] for rank in rankings]
+            # Qloo ranking is evidence of retrieval, NOT numeric affinity.
+            worst_rank = max(positions)
+            avg_rank = sum(positions) / len(positions)
+            if all(v is not None for v in vals):
+                score = round(min(vals) * .7 + sum(vals) / len(vals) * .3, 4)
+                scored.append((score, name, id_, vals, positions))
+            else:
+                ranked.append((worst_rank, avg_rank, name, id_, positions))
+        scored.sort(key=lambda x: (-x[0], x[1], x[2]))
+        ranked.sort(key=lambda x: (x[0], x[1], x[2], x[3]))
+        if scored:
+            score, name, id_, affinities, positions = scored[0]
+            choices.append({"category": cat, "name": name, "qloo_id": id_, "score": score,
+                            "participant_affinities": affinities, "participant_ranks": positions,
+                            "why": "Shared Qloo result; fairness score uses 70% weakest affinity and 30% mean.",
+                            "source": "qloo_affinity"})
+        elif ranked:
+            _, _, name, id_, positions = ranked[0]
+            choices.append({"category": cat, "name": name, "qloo_id": id_, "score": None,
+                            "participant_affinities": [], "participant_ranks": positions,
+                            "why": "Shared Qloo result for all participants. Selected by worst participant rank; Qloo supplied no valid numeric affinity.",
+                            "source": "qloo_rank"})
         else:
-            choices.append({"category": cat, "name": None, "score": None, "why": "No verified common entity in returned candidates; no invented recommendation", "source": "qloo"})
+            choices.append({"category": cat, "name": None, "score": None,
+                            "why": "No verified common entity in returned candidates; no invented recommendation",
+                            "source": "qloo"})
     return {"mode": "LIVE_QLOO", "choices": choices, "unresolved": unresolved}
 
 if __name__ == "__main__":
