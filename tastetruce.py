@@ -122,6 +122,7 @@ def plan(profiles, categories=("film", "music", "dining"), location=None, client
             valid = [x for x in results if entity_id(x) and (cat != "dining" or is_dining_place(x))]
             per_person.append({entity_id(x): x for x in valid})
             rankings.append({entity_id(x): i + 1 for i, x in enumerate(valid)})
+        candidate_counts = [len(group) for group in per_person]
         shared = set.intersection(*(set(x) for x in per_person))
         scored, ranked = [], []
         for id_ in shared:
@@ -144,17 +145,19 @@ def plan(profiles, categories=("film", "music", "dining"), location=None, client
             choices.append({"category": cat, "name": name, "qloo_id": id_, "score": score,
                             "participant_affinities": affinities, "participant_ranks": positions,
                             "why": "Shared Qloo result; fairness score uses 70% weakest affinity and 30% mean.",
-                            "source": "qloo_affinity"})
+                            "source": "qloo_affinity", "candidate_counts": candidate_counts})
         elif ranked:
             _, _, name, id_, positions = ranked[0]
             choices.append({"category": cat, "name": name, "qloo_id": id_, "score": None,
                             "participant_affinities": [], "participant_ranks": positions,
                             "why": "Shared Qloo result for all participants. Selected by worst participant rank; Qloo supplied no valid numeric affinity.",
-                            "source": "qloo_rank"})
+                            "source": "qloo_rank", "candidate_counts": candidate_counts})
         else:
+            reason = ("No eligible results were returned for at least one participant; try another artist or city."
+                      if any(count == 0 for count in candidate_counts) else
+                      "Both participants have candidates, but none share a Qloo entity ID. Try more similar artists.")
             choices.append({"category": cat, "name": None, "score": None,
-                            "why": "No verified common entity in returned candidates; no invented recommendation",
-                            "source": "qloo"})
+                            "why": reason, "candidate_counts": candidate_counts, "source": "qloo"})
     return {"mode": "LIVE_QLOO", "choices": choices, "unresolved": unresolved}
 
 if __name__ == "__main__":
