@@ -69,10 +69,10 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--live", action="store_true", help="Use server-side QLOO_API_KEY")
-    parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))\n    parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
     if args.live and not os.environ.get("QLOO_API_KEY"):
         parser.error("QLOO_API_KEY must be set on server")
     Handler.offline = not args.live
     print("TasteTruce", "LIVE_QLOO" if args.live else "OFFLINE_FIXTURE", "at http://127.0.0.1:" + str(args.port))
-    ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()
+    ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
