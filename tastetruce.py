@@ -64,6 +64,15 @@ def entity_id(obj):
 def entity_name(obj):
     return str(obj.get("name") or obj.get("title") or obj.get("properties", {}).get("name", "")).strip()
 
+def is_dining_place(obj):
+    """Require explicit food-service evidence; do not treat every POI as dining."""
+    tags = obj.get("tags") or []
+    raw = [str(t.get("name", "") if isinstance(t, dict) else t).lower() for t in tags]
+    properties = obj.get("properties") or {}
+    raw += [str(properties.get(k, "")).lower() for k in ("category", "type", "subtype")]
+    text = " ".join(raw)
+    return any(marker in text for marker in ("restaurant", "dining", "eatery", "cafe", "café", "bistro", "food & drink", "food and drink", "urn:tag:genre:restaurant"))
+
 def scoring(obj):
     raw = obj.get("affinity", obj.get("score", 0))
     try:
@@ -105,7 +114,7 @@ def plan(profiles, categories=("film", "music", "dining"), location=None, client
         per_person = []
         for ids in resolved:
             results = client.insights(ids, CATEGORIES[cat], location=location, take=15)
-            per_person.append({entity_id(x): x for x in results if entity_id(x)})
+            per_person.append({entity_id(x): x for x in results if entity_id(x) and (cat != "dining" or is_dining_place(x))})
         shared = set.intersection(*(set(x) for x in per_person))
         scores = []
         for id_ in shared:
