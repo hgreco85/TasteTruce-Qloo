@@ -110,6 +110,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.live and not os.environ.get("QLOO_API_KEY"):
         parser.error("QLOO_API_KEY must be set on server")
-    Handler.offline = not args.live
+    # Render auto-enables live mode only when its server-side key is configured.
+    Handler.offline = not (args.live or bool(os.environ.get("QLOO_API_KEY")))
     print("TasteTruce", "LIVE_QLOO" if args.live else "OFFLINE_FIXTURE", "at http://127.0.0.1:" + str(args.port))
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
