@@ -5,6 +5,7 @@ import os
 import time
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 from tastetruce import plan, QlooError
 
 HTML = r'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TasteTruce • Find common ground</title>
@@ -56,7 +57,7 @@ class Handler(BaseHTTPRequestHandler):
 
     offline = True
     def do_HEAD(self):
-        if self.path in ("/", "/healthz"):
+        if urlsplit(self.path).path in ("/", "/healthz"):
             self.send_response(200)
             self.send_header("Content-Length", "0")
             self.end_headers()
@@ -65,9 +66,9 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
-        if self.path == "/healthz":
+        if urlsplit(self.path).path == "/healthz":
             return self.reply(200, {"status": "ok", "mode": "OFFLINE_FIXTURE" if self.offline else "LIVE_QLOO"})
-        if self.path != "/":
+        if urlsplit(self.path).path != "/":
             return self.reply(404, {"error": "Not found"})
         payload = HTML.encode()
         self.send_response(200)
@@ -77,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_POST(self):
-        if self.path != "/api/plan":
+        if urlsplit(self.path).path != "/api/plan":
             return self.reply(404, {"error": "Not found"})
         if not self.allow_live_request():
             return self.reply(429, {"error": "Live Qloo request quota reached. Try again later."})
