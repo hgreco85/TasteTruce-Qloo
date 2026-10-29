@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: tastetruce-qloo
+    runtime: python
+    plan: free
+    buildCommand: "echo 'Python stdlib; no dependencies'"
+    startCommand: "python web.py --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /healthz
+    autoDeployTrigger: off
+    envVars:
+      - key: QLOO_MAX_LIVE_REQUESTS
+        value: "100"
+# DRAFT ONLY. DO NOT connect this blueprint or deploy without explicit approval.
+# Without a server-side QLOO_API_KEY it will run OFFLINE_FIXTURE mode.
+# Add QLOO_API_KEY only via the hosting provider's protected server environment.
